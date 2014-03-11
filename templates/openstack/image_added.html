@@ -1,0 +1,11 @@
+<!not used>
+<title>Image Added</title>
+<body>
+    You added an image file!
+    <p>Here is your list of images:</p>
+    {% for image in user.image_set.all %}
+        <p>{{ image }}</p>
+    {% endfor %}
+    <p><a href="{% url 'openstack:home' %}">Go home?</a></p>
+</body>
+

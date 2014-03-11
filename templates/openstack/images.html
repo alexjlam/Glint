@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=1.0" />
+
+{% load static %}
+<html>
+<head>
+<script type="text/javascript" src="{% static 'openstack/user_interface.js' %}"></script>
+<script type="text/javascript" src="{% static 'openstack/d3.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static 'openstack/style.css' %}" />
+<script type="text/javascript">
+function addField(field, tmp) {
+    var div1 = document.createElement('div');
+    div1.innerHTML = document.getElementById(tmp).innerHTML;
+    document.getElementById(field).appendChild(div1);
+}
+</script>
+
+</head>
+<title>Images</title>
+<body>
+
+    <div class="topbar">
+        <h1>Glint | HEPRC Image Distribution Service</h1>
+    </div>
+
+    <div class="sidebar">
+        Logged in as: <a style="color: blue;">{{ user }}</a>
+        <div class="links">
+            <script>display_sidebar()</script>
+        </div>
+    </div>
+
+    <div class="main">
+        <h2>Images</h2>
+        {% if user.image_set.count != 0 %}
+            <form action="{% url 'openstack:image_removed' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for image in user.image_set.all %}
+                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }}<br>
+            {% endfor %}
+            <br>
+            <input type="submit" value="Delete" />
+            </form>
+        {% else %}
+            No images have been uploaded
+        {% endif %}
+        <br>
+
+        <form action="{% url 'openstack:image_added' %}" method="post" enctype="multipart/form-data">
+            Add new image file:
+            <div id="file">
+                <input type="file" name="image_file" multiple/>
+            </div><br>
+            Add new image address:
+            <div id="addr">
+                <input type="text" name="image_addr" />
+            </div><br>
+            <input type="submit" value="Upload Images" />
+        </form><br>
+
+        <button onclick="addField('file', 'tmp2')">Add another file</button>
+        <button onclick="addField('addr', 'tmp')">Add another address</button>
+
+    </div>
+
+    <div id="tmp" style="display:none">
+        <br><input type="text" name="image_addr" />
+    </div>
+    <div id="tmp2" style="display:none">
+        <br><input type="file" name="image_file" multiple />
+    </div>
+
+</body>
+</html>

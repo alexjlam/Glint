@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=1.0" />
+
+{% load static %}
+<html>
+<head>
+<script type="text/javascript" src="{% static 'openstack/user_interface.js' %}"></script>
+<script type="text/javascript" src="{% static 'openstack/message_handler.js' %}"></script>
+<script type="text/javascript" src="{% static 'openstack/d3.js' %}"></script>
+<script type="text/javascript" src="{% static 'openstack/spin.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static 'openstack/style.css' %}" />
+
+</head>
+<title>Home</title>
+<body>
+
+    <div class="topbar">
+        <h1>Glint | HEPRC Image Distribution Service</h1>
+    </div>
+
+    <div class="sidebar">
+        Logged in as: <a style="color: blue;">{{ user }}</a>
+        <div class="links">
+            <script>display_sidebar()</script>
+        </div>
+    </div>
+
+
+    <div class="main">
+        <h2>Deployments</h2>
+        {% if user.image_set.count != 0 and user.site_set.count != 0 %}
+            <div class="deployments" id="deployments">
+                <script>init("get_deployments")</script>
+            </div>
+            <br>
+            <div id="option">
+                <input type="button" value="Save" id="save" onclick="save()" />
+            </div>
+            <br><button onclick="stop_loop()">Stop Auto-Update</button>
+            <br><div id="spinner" class="spinner" style="width:100px;height:100px;"></div>
+        {% else %}
+            <p>No images and/or sites have been uploaded</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

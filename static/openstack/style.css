@@ -1,0 +1,63 @@
+body {
+    font: 14px arial;
+    word-wrap: break-word;
+}
+
+.main {
+    position: absolute;
+    left: 150px; top: 80px; right: 0; bottom: 0; 
+    background: #EBFAFF;
+    padding: 5px;
+}
+
+.deployments p {
+    padding: 4px;
+    margin: 2px;
+    background: white;
+    /*border: 2px solid #CFCFCF;*/
+}
+
+.deployments p2 {
+    padding: 4px;
+    margin: 2px;
+}
+
+.images div {
+    font: 20px arial;
+    position: relative;
+}
+
+h1 {
+    font: bold 20px arial;
+    text-shadow: 1px 1px black;
+    color: white;
+}
+
+h2 {
+    font: bold 16px arial;
+}
+
+.topbar {
+    position: absolute;
+    left: 0; right: 0;
+    height: 80px;
+    background: #0066FF;
+    padding: 5px;
+}
+
+.sidebar {
+    position: absolute;
+    width: 150px;
+    left: 0; top:80px; bottom: 0;
+    background: #B2D1F0;
+    padding: 5px;
+}
+
+.links p {
+    color: #3399FF;
+    background: white;
+    border: 2px solid #CFCFCF;
+    border-radius: 5px;
+    padding: 3px;
+}
+

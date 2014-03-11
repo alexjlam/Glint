@@ -1,0 +1,10 @@
+<!not used>
+<title>Image Added</title>
+<body>
+    You added an site RC file!
+    <p>Here is your list of sites:</p>
+    {% for site in user.site_set.all %}
+        <p>{{ site.site_name }} -- {{ site.site_RC_file }}</p>
+    {% endfor %}
+    <p><a href="{% url 'openstack:home' %}">Go home?</a></p>
+</body>
