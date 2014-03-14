@@ -22,6 +22,8 @@ class Site(models.Model):
     site_name = models.CharField(max_length=50)
     site_RC_file = models.FileField(upload_to=get_file_path)
     site_password = models.CharField(max_length=50, editable=False)
+    token = models.CharField(max_length=2000, blank=True)
+    endpoint = models.CharField(max_length=50)
 
     def __unicode__(self):
         return self.site_name
@@ -48,13 +50,13 @@ class Instance(models.Model):
 
 # not currently being used now
 # currently generating a new token for each time we create/delete an image
-class Token(models.Model):
-    user = models.ForeignKey(MyUser)
-    site = models.ForeignKey(Site)
-    token = models.CharField(max_length=5000)
-    name = models.CharField(max_length=50)
-    expiry_date = models.CharField(max_length=50)
-
-    def __unicode__(self):
-        return self.name
+#class Token(models.Model):
+#    user = models.ForeignKey(MyUser)
+#    site = models.ForeignKey(Site)
+#    token = models.CharField(max_length=5000)
+#    name = models.CharField(max_length=50)
+#    expiry_date = models.CharField(max_length=50)
+#
+#    def __unicode__(self):
+#        return self.name
 

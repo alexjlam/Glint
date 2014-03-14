@@ -4,6 +4,7 @@ import subprocess, requests, json, re
 from keystoneclient.v2_0 import client as keyclient
 from keystoneclient.apiclient.exceptions import Unauthorized
 from glanceclient.v1 import client as glclient
+from glanceclient.exc import HTTPUnauthorized as BadToken
 from novaclient.v1_1 import client as nvclient
 
 def export_RC_file(site_file):
@@ -22,6 +23,30 @@ def export_RC_file(site_file):
             RC_dict['OS_USERNAME'] = re.search('export OS_USERNAME="?([^"]+)"?', line).group(1).strip()
     return RC_dict
 
+def update_token(site):
+    """
+    gets token and endpoint for site if it has not been set yet
+    checks if token is expired, if it is then it will get a new one
+    """
+    site_file = str(site.site_RC_file)
+    RC_dict = export_RC_file(site_file)
+    RC_dict['OS_PASSWORD'] = str(site.site_password)
+
+    if site.token == "":
+        # obtain first token and endpoint
+        site.token, site.endpoint = get_token_and_ep(RC_dict)
+        site.save()
+
+    glance = glclient.Client(endpoint=site.endpoint, token=site.token)
+
+    try:
+        # if token is good the test will be good
+        test = list(glance.images.list())
+    except(BadToken):
+        # if token is bad then it will get an updated token
+        site.token, endpoint = get_token_and_ep(RC_dict)
+        site.save()
+
 def get_token_and_ep(RC_dict):
     """
     creates a new token using the keystoneclient and gets the endpoint
@@ -38,17 +63,10 @@ def create_image(image, site, ids, errors, i):
     create an image on the site using the glanceclient
     """    
     name = image.image_name
-    site_file = str(site.site_RC_file)
-
-    try:
-        # exports info from RC file from the site and gets a token and endpoint
-        RC_dict = export_RC_file(site_file)
-        RC_dict['OS_PASSWORD'] = str(site.site_password)
-        token, endpoint = get_token_and_ep(RC_dict)
-
+    try:    
+        update_token(site)
         # uses the token and endpoint to get a glanceclient
-        glance = glclient.Client(endpoint=endpoint, token=token)
-
+        glance = glclient.Client(endpoint=site.endpoint, token=site.token)
         # create an image with a file
         if image.image_file != "":
             image_file = str(image.image_file)
@@ -59,8 +77,8 @@ def create_image(image, site, ids, errors, i):
             image = glance.images.create(name=name, disk_format="qcow2", container_format="bare", copy_from=image.image_addr)
     except (Unauthorized):
         errors[i] = site.site_name + " Unauthorized"
-    except (HTTPServiceUnavailable):
-        errors[i] = site.site_name + " HTTPServiceUnavailable"
+    #except (HTTPServiceUnavailable):
+        #errors[i] = site.site_name + " HTTPServiceUnavailable"
 
     ids[i] = image.id
 
@@ -68,15 +86,10 @@ def delete_image(deployed_image):
     """
     deletes an image from the site using the glanceclient
     """
-    site_file = str(deployed_image.site.site_RC_file)
-
-    # exports info from RC file
-    RC_dict = export_RC_file(site_file)
-    RC_dict['OS_PASSWORD'] = str(deployed_image.site.site_password)
-    token, endpoint = get_token_and_ep(RC_dict)
-
+    site = deployed_image.site
+    update_token(site)
     # gets the image from the image ID and then deletes it from the site
-    glance = glclient.Client(endpoint=endpoint, token=token)
+    glance = glclient.Client(endpoint=site.endpoint, token=site.token)
     image = glance.images.get(deployed_image.image_identity)
     image.delete()
 
@@ -88,11 +101,9 @@ def auto_delete_image(dep_image_list):
     to_delete = []
     for dep_image in dep_image_list:
         # creates glance client for each deployed image
-        site_file = str(dep_image.site.site_RC_file)
-        RC_dict = export_RC_file(site_file)
-        RC_dict['OS_PASSWORD'] = str(dep_image.site.site_password)
-        token, endpoint = get_token_and_ep(RC_dict)
-        glance = glclient.Client(endpoint=endpoint, token=token)
+        site = dep_image.site
+        update_token(site)
+        glance = glclient.Client(endpoint=site.endpoint, token=site.token)
         # gets a list of the image ID's from the site
         images = list(glance.images.list())
         id_list = [image.id for image in images]

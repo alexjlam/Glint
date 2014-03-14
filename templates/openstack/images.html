@@ -37,7 +37,7 @@ function addField(field, tmp) {
             <form action="{% url 'openstack:image_removed' %}" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% for image in user.image_set.all %}
-                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }}<br>
+                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }} -- {% if image.image_addr != "" %} {{image.image_addr }} {% else %} {{ image.image_file }} {% endif %}<br>
             {% endfor %}
             <br>
             <input type="submit" value="Delete" />
@@ -48,13 +48,31 @@ function addField(field, tmp) {
         <br>
 
         <form action="{% url 'openstack:image_added' %}" method="post" enctype="multipart/form-data">
-            Add new image file:
+            Add new image:
             <div id="file">
-                <input type="file" name="image_file" multiple/>
+                <table>
+                    <tr>
+                        <td align="left">Image name:</td>
+                        <td align="right"><input type="text" name="file_name" /><td>
+                    </tr>
+                    <tr>
+                        <td align="left">Image file:</td>
+                        <td align="right"><input type="file" name="image_file" /></td>
+                    </tr>
+                </table>
             </div><br>
-            Add new image address:
+            Add new image:
             <div id="addr">
-                <input type="text" name="image_addr" />
+                <table>
+                    <tr>
+                        <td align="left">Image name:</td>
+                        <td align="right"><input type="text" name="addr_name" /><td>
+                    </tr>
+                    <tr>
+                        <td align="left">Image address:</td>
+                        <td align="right"><input type="text" name="image_addr" /></td>
+                    </tr>
+                </table>
             </div><br>
             <input type="submit" value="Upload Images" />
         </form><br>
@@ -65,10 +83,28 @@ function addField(field, tmp) {
     </div>
 
     <div id="tmp" style="display:none">
-        <br><input type="text" name="image_addr" />
+        <table>
+            <tr>
+                <td align="left">Image name:</td>
+                <td align="right"><input type="text" name="addr_name" /><td>
+            </tr>
+            <tr>
+                <td align="left">Image address:</td>
+                <td align="right"><input type="text" name="image_addr" /></td>
+            </tr>
+        </table>
     </div>
     <div id="tmp2" style="display:none">
-        <br><input type="file" name="image_file" multiple />
+        <table>
+            <tr>
+                <td align="left">Image name:</td>
+                <td align="right"><input type="text" name="file_name" /><td>
+            </tr>
+            <tr>
+                <td align="left">Image file:</td>
+                <td align="right"><input type="file" name="image_file" /></td>
+            </tr>
+        </table>
     </div>
 
 </body>

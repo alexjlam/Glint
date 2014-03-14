@@ -362,13 +362,16 @@ def image_added(request):
     """
     user = request.user
     file_list = request.FILES.getlist('image_file')
-    for file in file_list:
-        user.image_set.create(image_file=file, image_name=str(file))
+    file_name_list = request.POST.getlist('file_name')
+    for file, file_name in zip(file_list, file_name_list):
+        user.image_set.create(image_file=file, image_name=file_name)
 
     addr_list = request.POST.getlist('image_addr')
-    for addr in addr_list:
+    addr_name_list = request.POST.getlist('addr_name')
+    for addr, addr_name in zip(addr_list, addr_name_list):
         if addr != "":
-            user.image_set.create(image_addr=addr, image_name=str(addr))
+            user.image_set.create(image_addr=addr, image_name=addr_name)
+
     return render_to_response("openstack/images.html", {'user':user})
 
 @login_required
@@ -395,7 +398,7 @@ def site_added(request):
     file_list = request.FILES.getlist('site_file')
     password_list = request.POST.getlist('password')
     for name, file, password in zip(name_list, file_list, password_list):
-        user.site_set.create(site_name=name, site_RC_file=file, site_password=password)
+        user.site_set.create(site_name=name, site_RC_file=file, site_password=password, token="", endpoint="")
     return render_to_response("openstack/sites.html", {'user':user})
 
 @login_required

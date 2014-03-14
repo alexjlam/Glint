@@ -147,10 +147,14 @@ function display_deployments() {
                 return "red"
             } )
             .on("mouseover", function() {
-                this.style.opacity=0.5;
+                if (saving == false) {
+                    this.style.opacity=0.5;
+                }
             } )
             .on("mouseout", function() {
-                this.style.opacity=1;
+                if (saving == false) {
+                    this.style.opacity=1;
+                }
             } )
             .on("click", function (d) {
                 if (saving == false) {
