@@ -13,6 +13,7 @@ class Image(models.Model):
     image_file = models.FileField(upload_to=get_file_path, blank=True)
     image_addr = models.CharField(max_length=500, blank=True)
     image_name = models.CharField(max_length=500)
+    bundled = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.image_name
@@ -20,43 +21,34 @@ class Image(models.Model):
 class Site(models.Model):
     user = models.ForeignKey(MyUser)
     site_name = models.CharField(max_length=50)
-    site_RC_file = models.FileField(upload_to=get_file_path)
-    site_password = models.CharField(max_length=50, editable=False)
+    site_RC_file = models.FileField(upload_to=get_file_path, blank=True)
+    site_password = models.CharField(max_length=50, editable=False, blank=True)
     token = models.CharField(max_length=2000, blank=True)
-    endpoint = models.CharField(max_length=50)
+    endpoint = models.CharField(max_length=50, blank=True)
+    site_type = models.CharField(max_length=50)
 
     def __unicode__(self):
         return self.site_name
 
+class EC2_Cred(models.Model):
+    user = models.OneToOneField(MyUser)
+    account = models.CharField(max_length=50)
+    access_key = models.CharField(max_length=100)
+    secret_key = models.CharField(max_length=100)
+    cert = models.FileField(upload_to=get_file_path, blank=True)
+    private_key = models.FileField(upload_to=get_file_path, blank=True)
+
+    def __unicode__(self):
+        return self.account
+
 class Deployed_Image(models.Model):
     user = models.ForeignKey(MyUser)
-    image = models.ForeignKey(Image)
-    image_identity = models.CharField(max_length=500)
-    site = models.ForeignKey(Site)
     deployed_image_name = models.CharField(max_length=500)
+    image = models.ForeignKey(Image)
+    site = models.ForeignKey(Site)
+    image_identity = models.CharField(max_length=500)
+    bucket = models.CharField(max_length=500, blank=True)
 
     def __unicode__(self):
         return self.deployed_image_name
-
-# not used
-class Instance(models.Model):
-    user = models.ForeignKey(MyUser)
-    instance_name = models.CharField(max_length=50)
-    instance_identity = models.CharField(max_length=100)
-    deployed_image = models.ForeignKey(Deployed_Image)
-
-    def __unicode__(self):
-        return self.instance_name
-
-# not currently being used now
-# currently generating a new token for each time we create/delete an image
-#class Token(models.Model):
-#    user = models.ForeignKey(MyUser)
-#    site = models.ForeignKey(Site)
-#    token = models.CharField(max_length=5000)
-#    name = models.CharField(max_length=50)
-#    expiry_date = models.CharField(max_length=50)
-#
-#    def __unicode__(self):
-#        return self.name
 

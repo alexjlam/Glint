@@ -38,7 +38,7 @@ function addField(field, tmp) {
             <form action="{% url 'openstack:site_removed' %}" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% for site in user.site_set.all %}
-                <input type="checkbox" name=site value="{{ site.id }}" id="site{{ forloop.counter }}">{{ site }} -- {{ site.site_RC_file }}<br>
+                <input type="checkbox" name=site value="{{ site.id }}" id="site{{ forloop.counter }}">{{ site }} -- {{ site.site_type }}<br>
             {% endfor %}
             <br>
             <input type="submit" value="Delete" />
@@ -47,9 +47,65 @@ function addField(field, tmp) {
             No sites have been uploaded
         {% endif %}
         <br>
+        {% if user.ec2_cred %}
+            EC2 Credentials:
+            <table>
+                <tr>
+                    <td align="left">Account Number:</td>
+                    <td align="right">{{ user.ec2_cred.account }}</td>
+                </tr>
+                <tr>
+                    <td align="left">Access Key:</td>
+                    <td align="right">{{ user.ec2_cred.access_key }}</td>
+                </tr>
+                <tr>
+                    <td align="left">Secret Key:</td>
+                    <td align="right">{{ user.ec2_cred.secret_key }}</td>
+                </tr>
+                <tr>
+                    <td align="left">Certificate:</td>
+                    <td align="right">{{ user.ec2_cred.cert }}</td>
+                </tr>
+                <tr>
+                    <td align="left">Private Key:</td>
+                    <td align="right">{{ user.ec2_cred.private_key }}</td>
+                </tr>
+            </table>
+            <form action="{% url 'openstack:ec2_removed' %}" method="post" enctype="multipart/form-data">
+                <input type="submit" name="submit" value="Delete EC2 Credentials" />
+            </form>
+        {% else %}
+            <form action="{% url 'openstack:ec2_added' %}" method="post" enctype="multipart/form-data">
+                Enter EC2 credentials:
+                <table>
+                    <tr>
+                        <td align="left">Account Number:</td>
+                        <td align="right"><input type="text" name="account" /><td>
+                    </tr>
+                    <tr>
+                        <td align="left">Access Key:</td>
+                        <td align="right"><input type="text" name="access_key" /><td>
+                    </tr>
+                    <tr>
+                        <td align="left">Secret Key:</td>
+                        <td align="right"><input type="text" name="secret_key" /><td>
+                    </tr>
+                    <tr>
+                        <td align="left">Certificate:</td>
+                        <td align="right"><input type="file" name="cert" /></td>
+                    </tr>
+                    <tr>
+                        <td align="left">Private Key:</td>
+                        <td align="right"><input type="file" name="pk" /></td>
+                    </tr>
+                </table>
+                <input type="submit" name="submit" value="Save EC2 Credentials" />
+            </form>
+        {% endif %}
+        <br>
 
         <form action="{% url 'openstack:site_added' %}" method="post" enctype="multipart/form-data">
-            Add new site:
+            Add new Openstack site:
             <div id="site">
                 <table>
                     <tr>

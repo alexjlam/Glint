@@ -3,10 +3,12 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse
 from django.contrib.auth.views import logout_then_login
 from django.contrib.auth.decorators import login_required
-from openstack_utils import create_image, delete_image, auto_delete_image, launch_instance, terminate_instance
+
+from openstack.models import EC2_Cred
+from openstack_utils import create_image, delete_image, auto_delete_image
+from ec2_utils import bundle_image, create_ami, delete_ami
 from keystoneclient.apiclient.exceptions import Unauthorized
 import os, json, threading
-
 
 @login_required
 def jsonhandler(request):
@@ -163,27 +165,39 @@ def filter_deployments(request, new_d, curr_d, latest_d, errors):
 def deploy_images(request, deployments, errors):
     """
     attaches each deployment onto a thread and runs the threads
-    images are then deployed using glanceclient
+    images are then deployed using glanceclient or boto
     stores the new deployed image in the model database
     """
     user = request.user
     images, sites, tasks = [], [], []
-    ids = {}
+    ids, buckets = {}, {}
 
     # appends threads for each image-site deployment
     for i in range(len(deployments)):
         image = user.image_set.get(image_name=deployments[i].keys()[0])
         site = user.site_set.get(site_name=deployments[i].values()[0])
-        t = threading.Thread(target=create_image, args=(image, site, ids, errors, i))
-        images.append(image)
-        sites.append(site)
-        tasks.append(t)
+        if site.site_type == 'openstack':
+            # deploys to openstack site
+            t1 = threading.Thread(target=create_image, args=(image, site, ids, errors, i))
+            images.append(image)
+            sites.append(site)
+            tasks.append(t1)
+        elif image.bundled == True and site.site_type == 'ec2':
+            # deploys to ec2 site
+            cred = user.ec2_cred
+            t2 = threading.Thread(target=create_ami, args=(image, site, cred, ids, buckets, i))
+            images.append(image)
+            sites.append(site)
+            tasks.append(t2)
+        elif image.bundled == False and site.site_type == 'ec2':
+            # if the user wanted to deploy to ec2 but the image was not yet bundled
+            errors[i] = image.image_name + " Not Bundled"
 
     # starts and joins threads
-    for t in tasks:
-        t.start()
-    for t in tasks:
-        t.join()
+    for task in tasks:
+        task.start()
+    for task in tasks:
+        task.join()
 
     # adds deploymemts to database with ids dict holding deployment ID
     for i in range(len(deployments)):
@@ -192,11 +206,15 @@ def deploy_images(request, deployments, errors):
             name = images[i].image_name
             ID = ids[i]
             site = sites[i]
-            deployed_image = user.deployed_image_set.create(deployed_image_name=name, image=image, image_identity=ID, site=site)
+            if site.site_type == 'openstack':
+                deployed_image = user.deployed_image_set.create(deployed_image_name=name, image=image, image_identity=ID, site=site)
+            elif site.site_type == 'ec2':
+                bucket = buckets[i]
+                deployed_image = user.deployed_image_set.create(deployed_image_name=name, image=image, image_identity=ID, site=site, bucket=bucket)
 
 def delete_images(request, deployments):
     """
-    deletes each image in deployments from the given site with glance
+    deletes each image in deployments from the given site with glance or boto
     removes the deployed image from the model database
     """
     user = request.user
@@ -206,7 +224,11 @@ def delete_images(request, deployments):
         image_choice = user.image_set.get(image_name=image)
         site_choice = user.site_set.get(site_name=site)
         deployed_image_choice = user.deployed_image_set.get(image=image_choice, site=site_choice)
-        delete_image(deployed_image_choice)
+        if site_choice.site_type == 'openstack':
+            delete_image(deployed_image_choice)
+        elif site_choice.site_type == 'ec2':
+            cred = user.ec2_cred
+            delete_ami(deployed_image_choice, cred)
         deployed_image_choice.delete()
 
 @login_required
@@ -302,59 +324,6 @@ def image_deleted(request):
     else:
         return HttpResponse("You didn't select any images")
 
-# not used
-@login_required
-def launch(request):
-    """
-    renders user's launch page for instances
-    """
-    return render_to_response("openstack/launch.html", {'user':request.user})
-
-# not used
-@login_required
-def instance_launched(request):
-    """
-    launches instance with a name and flavor from the user and stores the instance in a model
-    """
-    user = request.user
-    name = request.POST['name']
-    deployed_image = user.deployed_image_set.get(pk=request.POST['image'])
-    flavor = request.POST['flavor']
-    instance_id = launch_instance(name, deployed_image, flavor)
-    instance = user.instance_set.create(instance_name=name, deployed_image=deployed_image, instance_identity=instance_id)
-    return render_to_response("openstack/instance_launched.html", {'user':user, 'instance':instance})
-
-# not used
-@login_required
-def terminate(request):
-    """
-    renders user's terminate page for instances
-    """
-    return render_to_response("openstack/terminate.html", {'user':request.user})
-
-# not used
-@login_required
-def instance_terminated(request):
-    """
-    terminates each instance selected and deletes instance from model
-    """
-    user = request.user
-    # gets the list of database ids for each instance and iterates through them and terminates
-    instance_ids = request.POST.getlist('instance')
-    if instance_ids:
-        for instance_id in instance_ids:
-            # gets the appropriate instance from the database id
-            instance = user.instance_set.get(pk=instance_id)
-            try:
-                # sends instance selected to terminate with nova and deletes from the model
-                terminate_instance(instance)
-                instance.delete()
-            except (Unauthorized):
-                return HttpResponse("You are not authorized to terminate from that site. Check that your password is correct.")
-        return render_to_response("openstack/instance_terminated.html", {'user':user})
-    else:
-        return HttpResponse("You didn't select any instances")
-
 @login_required
 def image_added(request):
     """
@@ -378,6 +347,7 @@ def image_added(request):
 def image_removed(request):
     """
     removes the user's image from the model database and deletes from repo
+    if the image was bundled for EC2 it will also delete the manifest and parts
     """
     user = request.user
     image_ids = request.POST.getlist('image')
@@ -385,32 +355,90 @@ def image_removed(request):
         image_choice = user.image_set.get(pk=image_id)
         if image_choice.image_file != "":
             os.remove(str(image_choice.image_file))
+        if image_choice.bundled == True:
+            os.remove(str(image_choice.image_file) + '.manifest.xml')
+            i = 0
+            while os.path.exists(str(image_choice.image_file) + '.part.' + str(i)):
+                os.remove(str(image_choice.image_file) + '.part.' + str(i))
+                i += 1
         image_choice.delete()
     return render_to_response("openstack/images.html", {'user':user})
 
 @login_required
 def site_added(request):
     """
-    add the user's site RC file and stores the site password to the model database and saves to repo
+    adds openstack sites to model database with the user's site RC file and password
     """
     user = request.user
     name_list = request.POST.getlist('site_name')
     file_list = request.FILES.getlist('site_file')
     password_list = request.POST.getlist('password')
     for name, file, password in zip(name_list, file_list, password_list):
-        user.site_set.create(site_name=name, site_RC_file=file, site_password=password, token="", endpoint="")
+        user.site_set.create(site_name=name, site_RC_file=file, site_password=password, token="", endpoint="", site_type='openstack')
     return render_to_response("openstack/sites.html", {'user':user})
 
 @login_required
 def site_removed(request):
     """
-    removes the user's site RC file from the model database and deletes from repo
+    removes openstack sites from model database and deletes the RC file
     """
     user = request.user
     site_ids = request.POST.getlist('site')
     for site_id in site_ids:
         site_choice = user.site_set.get(pk=site_id)
-        os.remove(str(site_choice.site_RC_file))
+        if site_choice.site_type == 'openstack':
+            os.remove(str(site_choice.site_RC_file))
         site_choice.delete()
     return render_to_response("openstack/sites.html", {'user':user})
+
+@login_required
+def ec2_added(request):
+    """
+    adds EC2 credentials to user so they can deploy onto EC2 clouds
+    once registered it will automatically add all EC2 site regions
+    """
+    user = request.user
+    account = request.POST['account']
+    ak = request.POST['access_key']
+    sk = request.POST['secret_key']
+    cert = request.FILES['cert']
+    pk = request.FILES['pk']
+    cred = EC2_Cred.objects.create(user=user, account=account, access_key=ak, secret_key=sk, cert=cert, private_key=pk)
+    cred.save()
+    ec2_sites = ['Ireland', 'N_Virginia', 'N_California', 'Oregon',
+                 'Singapore', 'Sydney', 'Tokyo', 'Sao_Paulo']
+    for site in ec2_sites:
+        name = "EC2-" + site
+        user.site_set.create(site_name=name, site_type='ec2')
+    return render_to_response("openstack/sites.html", {'user':user})
+
+@login_required
+def ec2_removed(request):
+    """
+    removes EC2 credentials and removes any EC2 site regions still left
+    """
+    user = request.user
+    cred = user.ec2_cred
+    os.remove(str(cred.cert))
+    os.remove(str(cred.private_key))
+    cred.delete()
+    sites = user.site_set.all()
+    for site in sites:
+        if site.site_type == 'ec2':
+            site.delete()
+    return render_to_response("openstack/sites.html", {'user':user})
+
+@login_required
+def image_bundled(request):
+    """
+    bundles image files saved in repo to deploy onto EC2 clouds
+    """
+    user = request.user
+    name = str(user)
+    image = user.image_set.get(pk=request.POST['image'])
+    cred = user.ec2_cred
+    bundle_image(name, image, cred)
+    image.bundled = True
+    image.save()
+    return render_to_response("openstack/images.html", {'user':user})
 

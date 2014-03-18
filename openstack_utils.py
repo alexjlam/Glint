@@ -93,6 +93,7 @@ def delete_image(deployed_image):
     image = glance.images.get(deployed_image.image_identity)
     image.delete()
 
+# currently does not auto delete image if removed on an EC2 site
 def auto_delete_image(dep_image_list):
     """
     compares a given list of deployed images with those on the site
@@ -102,55 +103,14 @@ def auto_delete_image(dep_image_list):
     for dep_image in dep_image_list:
         # creates glance client for each deployed image
         site = dep_image.site
-        update_token(site)
-        glance = glclient.Client(endpoint=site.endpoint, token=site.token)
-        # gets a list of the image ID's from the site
-        images = list(glance.images.list())
-        id_list = [image.id for image in images]
-        # if the image ID is no longer on the site, add it to a list of images to delete
-        if dep_image.image_identity not in id_list:
-            to_delete.append(dep_image.image_identity)
+        if site.site_type == 'openstack':
+            update_token(site)
+            glance = glclient.Client(endpoint=site.endpoint, token=site.token)
+            # gets a list of the image ID's from the site
+            images = list(glance.images.list())
+            id_list = [image.id for image in images]
+            # if the image ID is no longer on the site, add it to a list of images to delete
+            if dep_image.image_identity not in id_list:
+                to_delete.append(dep_image.image_identity)
     return to_delete
-
-# not used
-# does not work for the DAIR site, AmbiguousEndpoint error because the client
-# does not know whether to connect to Alberta or Quebec site
-def launch_instance(name, deployed_image, flavor):
-    """
-    launches an instance from the deployed image with a name and flavor using the novaclient
-    """
-    # from deployed image get site's RC file, image ID
-    site_file = str(deployed_image.site.site_RC_file)
-    image_id = str(deployed_image.image_identity)
-
-    # export info from RC file (doesn't work with endpoint and token?)
-    RC_dict = export_RC_file(site_file)
-    RC_dict['OS_PASSWORD'] = str(deployed_image.site.site_password)
-
-    # get a nova client and image using deployed image ID
-    nova = nvclient.Client(RC_dict['OS_USERNAME'], RC_dict['OS_PASSWORD'], RC_dict['OS_TENANT_NAME'], RC_dict['OS_AUTH_URL'])
-    image = nova.images.find(id=image_id)
-    # create instance with deployed image image and give it a name and flavor
-    instance = nova.servers.create(name=name, image=image, flavor=flavor)
-    return instance.id
-
-# not used
-# does not work for the DAIR site, AmbiguousEndpoint error because the client
-# does not know whether to connect to Alberta or Quebec site
-def terminate_instance(instance):
-    """
-    terminates the instance from the site using the novaclient
-    """
-    # from instance get the site's RC file, instance ID
-    site_file = str(instance.deployed_image.site.site_RC_file)
-    instance_id = str(instance.instance_identity)
-
-    # export info from RC file
-    RC_dict = export_RC_file(site_file)
-    RC_dict['OS_PASSWORD'] = str(instance.deployed_image.site.site_password)
-
-    # get nova client and instance and then delete it
-    nova = nvclient.Client(RC_dict['OS_USERNAME'], RC_dict['OS_PASSWORD'], RC_dict['OS_TENANT_NAME'], RC_dict['OS_AUTH_URL'])
-    instance = nova.servers.find(id=instance_id)
-    instance.delete()
 

@@ -37,7 +37,7 @@ function addField(field, tmp) {
             <form action="{% url 'openstack:image_removed' %}" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% for image in user.image_set.all %}
-                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }} -- {% if image.image_addr != "" %} {{image.image_addr }} {% else %} {{ image.image_file }} {% endif %}<br>
+                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }} -- {% if image.image_addr != "" %} {{ image.image_addr }} {% else %} {{ image.image_file }} {% endif %} -- {% if image.bundled %} bundled {% else %} unbundled {% endif %}<br>
             {% endfor %}
             <br>
             <input type="submit" value="Delete" />
@@ -46,7 +46,22 @@ function addField(field, tmp) {
             No images have been uploaded
         {% endif %}
         <br>
-
+        {% if user.ec2_cred %}
+            <form action="{% url 'openstack:image_bundled' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                Bundle images:
+                <select name="image">
+                    {% for image in user.image_set.all %}
+                        {% if image.bundled == False and image.image_addr == "" %}
+                            <option name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <input type="submit" value="Bundle" />
+            </form>
+            Images must be bundled before they can be deployed onto EC2 clouds<br>
+        {% endif %}
+        <br>
         <form action="{% url 'openstack:image_added' %}" method="post" enctype="multipart/form-data">
             Add new image:
             <div id="file">
