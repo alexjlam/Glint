@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 
 from openstack.models import EC2_Cred
 from openstack_utils import create_image, delete_image, auto_delete_image
-from ec2_utils import bundle_image, create_ami, delete_ami
+from ec2_utils import verify_cred, bundle_image, create_ami, delete_ami, auto_delete_ami
 from keystoneclient.apiclient.exceptions import Unauthorized
 import os, json, threading
 
@@ -78,8 +78,25 @@ def get_deployments(request):
     """
     # updates model if any images have been deleted from the site
     user = request.user
+    to_delete, openstack_deployments, ec2_deployments = [], [], []
     dep_image_list = user.deployed_image_set.all()
-    to_delete = auto_delete_image(dep_image_list)
+    for dep_image in dep_image_list:
+        site = dep_image.site
+        if site.site_type == 'openstack':
+            openstack_deployments.append(dep_image)
+        elif site.site_type == 'ec2':
+            ec2_deployments.append(dep_image)
+    
+    auto_delete_image(openstack_deployments, to_delete)
+
+    # auto_delete_ami cannot currently handle large loads for checking deployments
+    # probably too much lag time for checking each deployment and starting another call
+    # to ask for an update on deployments
+    #if user.ec2_cred:
+    #    cred = user.ec2_cred
+    #    auto_delete_ami(ec2_deployments, to_delete, cred)
+    
+
     for image_ID in to_delete:        
         dep_image = user.deployed_image_set.get(image_identity=image_ID)
         dep_image.delete()
@@ -395,7 +412,7 @@ def site_removed(request):
 def ec2_added(request):
     """
     adds EC2 credentials to user so they can deploy onto EC2 clouds
-    once registered it will automatically add all EC2 site regions
+    if the access and secret key are verified, it will add all EC2 site regions
     """
     user = request.user
     account = request.POST['account']
@@ -403,14 +420,20 @@ def ec2_added(request):
     sk = request.POST['secret_key']
     cert = request.FILES['cert']
     pk = request.FILES['pk']
-    cred = EC2_Cred.objects.create(user=user, account=account, access_key=ak, secret_key=sk, cert=cert, private_key=pk)
-    cred.save()
-    ec2_sites = ['Ireland', 'N_Virginia', 'N_California', 'Oregon',
-                 'Singapore', 'Sydney', 'Tokyo', 'Sao_Paulo']
-    for site in ec2_sites:
-        name = "EC2-" + site
-        user.site_set.create(site_name=name, site_type='ec2')
-    return render_to_response("openstack/sites.html", {'user':user})
+
+    if (verify_cred(ak, sk)):
+        cred = EC2_Cred.objects.create(user=user, account=account, access_key=ak, secret_key=sk, cert=cert, private_key=pk)
+        cred.save()
+
+        ec2_sites = ['Ireland', 'N_Virginia', 'N_California', 'Oregon',
+                     'Singapore', 'Sydney', 'Tokyo', 'Sao_Paulo']
+        for site in ec2_sites:
+            name = "EC2-" + site
+            user.site_set.create(site_name=name, site_type='ec2')
+        return render_to_response("openstack/sites.html", {'user':user})
+    else:
+        error = "Access key or secret key is unauthorized. Please try again."
+        return render_to_response("openstack/sites.html", {'user':user, 'error':error})
 
 @login_required
 def ec2_removed(request):
@@ -421,6 +444,7 @@ def ec2_removed(request):
     cred = user.ec2_cred
     os.remove(str(cred.cert))
     os.remove(str(cred.private_key))
+    cred.account = ""
     cred.delete()
     sites = user.site_set.all()
     for site in sites:

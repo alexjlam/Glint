@@ -93,24 +93,20 @@ def delete_image(deployed_image):
     image = glance.images.get(deployed_image.image_identity)
     image.delete()
 
-# currently does not auto delete image if removed on an EC2 site
-def auto_delete_image(dep_image_list):
+def auto_delete_image(dep_image_list, to_delete):
     """
     compares a given list of deployed images with those on the site
-    and returns a list of images that are no longer deployed on the site
+    and adds to a list of images that are no longer deployed on the site
     """
-    to_delete = []
     for dep_image in dep_image_list:
         # creates glance client for each deployed image
         site = dep_image.site
-        if site.site_type == 'openstack':
-            update_token(site)
-            glance = glclient.Client(endpoint=site.endpoint, token=site.token)
-            # gets a list of the image ID's from the site
-            images = list(glance.images.list())
-            id_list = [image.id for image in images]
-            # if the image ID is no longer on the site, add it to a list of images to delete
-            if dep_image.image_identity not in id_list:
-                to_delete.append(dep_image.image_identity)
-    return to_delete
+        update_token(site)
+        glance = glclient.Client(endpoint=site.endpoint, token=site.token)
+        # gets a list of the image ID's from the site
+        images = list(glance.images.list())
+        id_list = [image.id for image in images]
+        # if the image ID is no longer on the site, add it to a list of images to delete
+        if dep_image.image_identity not in id_list:
+            to_delete.append(dep_image.image_identity)
 

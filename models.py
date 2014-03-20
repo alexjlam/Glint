@@ -23,7 +23,7 @@ class Site(models.Model):
     site_name = models.CharField(max_length=50)
     site_RC_file = models.FileField(upload_to=get_file_path, blank=True)
     site_password = models.CharField(max_length=50, editable=False, blank=True)
-    token = models.CharField(max_length=2000, blank=True)
+    token = models.CharField(max_length=5000, blank=True)
     endpoint = models.CharField(max_length=50, blank=True)
     site_type = models.CharField(max_length=50)
 

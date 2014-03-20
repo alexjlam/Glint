@@ -47,7 +47,7 @@ function addField(field, tmp) {
             No sites have been uploaded
         {% endif %}
         <br>
-        {% if user.ec2_cred %}
+        {% if user.ec2_cred.account != "" %}
             EC2 Credentials:
             <table>
                 <tr>
@@ -72,10 +72,15 @@ function addField(field, tmp) {
                 </tr>
             </table>
             <form action="{% url 'openstack:ec2_removed' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
                 <input type="submit" name="submit" value="Delete EC2 Credentials" />
             </form>
         {% else %}
             <form action="{% url 'openstack:ec2_added' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% if error %}
+                    <p><a style="color: red;">{{ error }}</a></p>
+                {% endif %}
                 Enter EC2 credentials:
                 <table>
                     <tr>
