@@ -62,34 +62,37 @@ def create_ami(image, site, cred, ids, buckets, i):
 
     # register bundle to EC2
     manifest = manifest.split('/')[-1]
-    conn = boto.ec2.connect_to_region(region_name=region, aws_access_key_id=ak, aws_secret_access_key=sk)
+    ec2conn = boto.ec2.connect_to_region(region_name=region, aws_access_key_id=ak, aws_secret_access_key=sk)
     imgloc = bucket + '/' + manifest
-    img_id = conn.register_image(name=name, image_location=imgloc)
+    img_id = ec2conn.register_image(name=name, image_location=imgloc)
 
     ids[i] = img_id
     buckets[i] = bucket
 
-def delete_ami(deployed_image, cred):
+def delete_ami(deployment, cred):
     """
     deregisters ami and deletes the bucket and contents
     """
-    # deregister AMI
     ak = str(cred.access_key)
     sk = str(cred.secret_key)
-    region = regions[str(deployed_image.site)][1]
-    conn = boto.ec2.connect_to_region(region_name=region, aws_access_key_id=ak, aws_secret_access_key=sk)
-    id = deployed_image.image_identity
-    conn.deregister_image(image_id=id)
+    region = regions[str(deployment.site)][1]
+    id = deployment.image_identity
 
-    delete_bucket(deployed_image, ak, sk)
+    # connect to EC2 and deregister
+    ec2conn = boto.ec2.connect_to_region(region_name=region, aws_access_key_id=ak, aws_secret_access_key=sk)
+    amis = ec2conn.get_all_images(owners='self')
+    id_list = [str(ami).split(':')[1] for ami in amis]
+    if id in id_list:
+        ec2conn.deregister_image(image_id=id)
+    delete_bucket(deployment, ak, sk)
 
-def delete_bucket(deployed_image, ak, sk):
+def delete_bucket(deployment, ak, sk):
     """
     deletes the bucket contents and then the bucket
     """
     s3conn = S3Connection(ak, sk)
     try:
-        bucket = s3conn.get_bucket(bucket_name=deployed_image.bucket)
+        bucket = s3conn.get_bucket(bucket_name=deployment.bucket)
         keys = bucket.get_all_keys()
         bucket.delete_keys(keys)
         bucket.delete()
@@ -108,8 +111,8 @@ def auto_delete_ami(deployments, to_delete, cred):
     for dep in deployments:
         site = dep.site
         region = regions[str(site)][1]
-        conn = boto.ec2.connect_to_region(region_name=region, aws_access_key_id=ak, aws_secret_access_key=sk)
-        amis = conn.get_all_images(owners='self')
+        ec2conn = boto.ec2.connect_to_region(region_name=region, aws_access_key_id=ak, aws_secret_access_key=sk)
+        amis = ec2conn.get_all_images(owners='self')
         id_list = [str(ami).split(':')[1] for ami in amis]
         if dep.image_identity not in id_list:
             to_delete.append(dep.image_identity)

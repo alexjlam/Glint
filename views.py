@@ -13,70 +13,47 @@ import os, json, threading
 @login_required
 def jsonhandler(request):
     """
-    parses throught json message and executes the appropriate command
+    parses through json message and executes the appropriate command
     returns back data to callback as a json string
     """
     user = request.user
     req = request.POST['jsonMsg']
-    #print "REQ", req
     jsondata = json.loads(req)
 
-    #print type(jsondata)
-    #print "loaded json data", jsondata
-
-    data = {}
+    data, errors = {}, {}
     dep_list = []
     op = str(jsondata['op'])
-    #print op
-    #test = jsondata['deployments']
-    #print test['to_deploy']
-    errors = {}
 
-    #try except Unauthorized HttpResponse not used
-    try:
-        # op get_deployments: gets a list of deployments and all image + sites combinations
-        if (op == 'get_deployments'):
-            if (jsondata['deployments'] == 'init'):
-                data['init'] = "True"
-            else:
-                data['init'] = "False"
-            data['op'] = "get_deployments"
-            data['deployments'] = get_deployments(request)
-            data['all'] = get_all(request)
-        # op compare: gets a list of deployments only
-        elif (op == "compare"):
-            data['op'] = "compare"
-            data['deployments'] = get_deployments(request)
-        # op update: deploys and deletes images from sites
-        elif (op == 'update'):
-            data['op'] = "update"
-            new_deployments = jsondata['deployments']['new_deployments']
-            curr_deployments = jsondata['deployments']['curr_deployments']
-            latest_deployments = get_deployments(request)
-            filter_deployments(request, new_deployments, curr_deployments, latest_deployments[0], errors)
-            data['deployments'] = get_deployments(request)
-            data['all'] = get_all(request)
-        # op get_images: gets a list of all images
-        elif (op == 'get_images'):
-            data['op'] = "get_images"
-            data['images'] = get_images(request)
+    # op get_deployments: gets a list of deployments and all image + sites combinations
+    if (op == 'get_deployments'):
+        if (jsondata['deployments'] == 'init'):
+            data['init'] = "True"
         else:
-            print "Not an operation"
+            data['init'] = "False"
+        data['op'] = "get_deployments"
+        data['deployments'] = get_latest_deployments(request)
+        data['all'] = get_all(request)
+    # op update: deploys and deletes images from sites
+    elif (op == 'update'):
+        data['op'] = "update"
+        new_deployments = jsondata['deployments']['new_deployments']
+        curr_deployments = get_deployments(request)[0]
+        filter_deployments(request, new_deployments, curr_deployments, errors)
+        data['deployments'] = get_deployments(request)
+        data['all'] = get_all(request)
+    else:
+        print "Not an operation"
 
-        data['errors'] = errors.values();
+    data['errors'] = errors.values();
 
-        #print "ALL DATA", data
-        jsonstr = json.dumps(data)
-        #print jsonstr
-        return HttpResponse(jsonstr)
-    except(Unauthorized):
-        return HttpResponse("Unauthorized")
+    jsonstr = json.dumps(data)
+    return HttpResponse(jsonstr)
 
-def get_deployments(request):
+def get_latest_deployments(request):
     """
-    gets the most current list of deployed images in a dict format
+    gets the most current list of deployed images from sites
     """
-    # updates model if any images have been deleted from the site
+    # sorts deployments by cloud types
     user = request.user
     to_delete, openstack_deployments, ec2_deployments = [], [], []
     dep_image_list = user.deployed_image_set.all()
@@ -86,21 +63,25 @@ def get_deployments(request):
             openstack_deployments.append(dep_image)
         elif site.site_type == 'ec2':
             ec2_deployments.append(dep_image)
-    
+
+    # gets a list of images that were deleted manually on Openstack and EC2
     auto_delete_image(openstack_deployments, to_delete)
+    if user.ec2_cred:
+        cred = user.ec2_cred
+        auto_delete_ami(ec2_deployments, to_delete, cred)
 
-    # auto_delete_ami cannot currently handle large loads for checking deployments
-    # probably too much lag time for checking each deployment and starting another call
-    # to ask for an update on deployments
-    #if user.ec2_cred:
-    #    cred = user.ec2_cred
-    #    auto_delete_ami(ec2_deployments, to_delete, cred)
-    
-
+    # deletes the above list of images from the models
     for image_ID in to_delete:        
         dep_image = user.deployed_image_set.get(image_identity=image_ID)
         dep_image.delete()
 
+    return get_deployments(request)
+  
+def get_deployments(request):
+    """
+    gets deployments in a dictionary format
+    """
+    user = request.user
     # gets list of deployments in the form: [{'image':['site1','site2'],...}]
     images = get_images(request)
     tmp_list = user.deployed_image_set.all()
@@ -149,7 +130,7 @@ def get_all(request):
         complete_list.append(dep)
     return complete_list
 
-def filter_deployments(request, new_d, curr_d, latest_d, errors):
+def filter_deployments(request, new_d, curr_d,  errors):
     """
     compares the list of new deployments to the old list
     sends deployments to either be deployed or deleted
@@ -160,17 +141,14 @@ def filter_deployments(request, new_d, curr_d, latest_d, errors):
     # creates a list of image-sites to deploy
     for key in new_d.keys():
         for site in new_d[key]:
-            # in the case where a image was deleted off a site
-            # and it was not updated on the website yet, it will
-            # not reupload the image to that site
-            if site not in latest_d[key] \
-            and site not in curr_d[key]:
+            if site not in curr_d[key]:
                 entry = {}
                 entry[key] = site
                 to_deploy.append(entry)
 
-    for key in latest_d.keys():
-        for site in latest_d[key]:
+    # creates a list of image-sites to delete
+    for key in curr_d.keys():
+        for site in curr_d[key]:
             if site not in new_d[key]:
                 entry = {} 
                 entry[key] = site
@@ -253,7 +231,6 @@ def home(request):
     """
     renders user's home page
     """
-    #return render_to_response("openstack/test.html")
     return render_to_response("openstack/home.html", {'user':request.user})
 
 def logout_user(request):
@@ -269,77 +246,6 @@ def images(request):
 @login_required
 def sites(request):
     return render_to_response("openstack/sites.html", {'user':request.user})
-
-# not being used, currently generating token for each create/delete
-@login_required
-def get_token(request):
-    user = request.user
-    return HttpResponse("you got a token")
-
-# not used
-@login_required
-def deploy(request):
-    """
-    renders user's deploy page
-    """
-    return render_to_response("openstack/deploy.html", {'user':request.user})
-
-# not used
-@login_required
-def image_deployed(request):
-    """
-    deploys the user's image files to various sites using glance api
-    """
-    user = request.user
-    name = request.POST['name']
-    # gets the image and list of database ids for each site and iterates through them and deploys on each site
-    image_choice = user.image_set.get(pk=request.POST['image'])
-    site_ids = request.POST.getlist('site')
-    if site_ids:
-        for site in site_ids:
-            # gets the appropriate site from the database id
-            site_choice = user.site_set.get(pk=site)
-            try:
-                print image_choice
-                # sends image and site selected to create with glance and stores in model
-                #image_id = create_image(image_choice, site_choice)
-                deployed_image = user.deployed_image_set.create(deployed_image_name=image_choice.image_name, image=image_choice, image_identity=image_id, site=site_choice)
-            except (Unauthorized):
-                return HttpResponse("You are not authorized to deploy an image to that site. Check that your password is correct.")
-        return render_to_response("openstack/image_deployed.html", {'user':user})
-    else:
-        return HttpResponse("You didn't select any sites")
-
-# not used
-@login_required
-def delete(request):
-    """
-    renders user's delete page
-    """
-    return render_to_response("openstack/delete.html", {'user':request.user})
-
-# not used
-@login_required
-def image_deleted(request):
-    """
-    deletes indicated deployed images created by the user using glance api
-    """
-    user = request.user
-    # gets the list of database ids for each image and iterates through them and deletes
-    image_ids = request.POST.getlist('image')
-    if image_ids:
-        for image_id in image_ids:
-            # gets the appropriate deployed image from the database id
-            deployed_image_choice = user.deployed_image_set.get(pk=image_id)
-            try:
-                # sends deployed image selected to delete with glance and deletes from model
-                delete_image(deployed_image_choice)
-                deployed_image_choice.delete()
-            except (Unauthorized):
-                return HttpResponse("You are not authorized to delete an image from that site. Check that your password is correct.")
-        return render_to_response("openstack/image_deleted.html", {'user':user})
-    else:
-        return HttpResponse("You didn't select any images")
 
 @login_required
 def image_added(request):

@@ -82,31 +82,36 @@ def create_image(image, site, ids, errors, i):
 
     ids[i] = image.id
 
-def delete_image(deployed_image):
+def delete_image(deployment):
     """
     deletes an image from the site using the glanceclient
     """
-    site = deployed_image.site
+    site = deployment.site
     update_token(site)
     # gets the image from the image ID and then deletes it from the site
     glance = glclient.Client(endpoint=site.endpoint, token=site.token)
-    image = glance.images.get(deployed_image.image_identity)
-    image.delete()
+    images = list(glance.images.list())
+    id_list = [image.id for image in images]
+    # if the image is still on the site, it will delete it
+    # else the image has already been deleted
+    if deployment.image_identity in id_list:
+        image = glance.images.get(deployment.image_identity)
+        image.delete()
 
-def auto_delete_image(dep_image_list, to_delete):
+def auto_delete_image(deployments, to_delete):
     """
     compares a given list of deployed images with those on the site
     and adds to a list of images that are no longer deployed on the site
     """
-    for dep_image in dep_image_list:
+    for dep in deployments:
         # creates glance client for each deployed image
-        site = dep_image.site
+        site = dep.site
         update_token(site)
         glance = glclient.Client(endpoint=site.endpoint, token=site.token)
         # gets a list of the image ID's from the site
         images = list(glance.images.list())
         id_list = [image.id for image in images]
         # if the image ID is no longer on the site, add it to a list of images to delete
-        if dep_image.image_identity not in id_list:
-            to_delete.append(dep_image.image_identity)
+        if dep.image_identity not in id_list:
+            to_delete.append(dep.image_identity)
 

@@ -17,9 +17,7 @@ var saving; //set at init() and save() to disable site buttons
 var api;
 var OPSURL = {"init":"/accounts/profile/jsonhandler/",
               "get_deployments":"/accounts/profile/jsonhandler/",
-              //"compare":"/accounts/profile/jsonhandler/",
               "update":"/accounts/profile/jsonhandler/"};
-              //"get_images":"/accounts/profile/jsonhandler/"};
 var DATA = {"init":"init",
             "update":"update",
             "deployments":"deployments"};
@@ -88,14 +86,6 @@ function JSONMessageHandler() {
         if(httpReq.readyState == 4){
             var json = httpReq.responseText;
             console.log("JSON message response " + json);
-            //if (String(json) == "Unauthorized") {
-            //    alert("You are unauthorized to access that site. Please check that your password is correct and reupload the site file.");
-            //    console.log("alerting unauth");
-            //    init("get_deployments");
-            //}
-            //if (String(json) == "HTTPServiceUnavailable") {
-            //    alert("Service currently unavailable. Try again later.");
-            //}
             obj = JSON.parse(json);
             if (obj.errors.length != 0) {
                 alert("ERROR: " + obj.errors);
@@ -146,14 +136,8 @@ function response_op_handler(obj) {
             first_deployments = obj.deployments[0];
         }
         display_deployments();
-    //} else if (obj.op == "compare") {
-    //    compare_deployments(obj);
-    //    DATA['deployments'] = new_deployments;
-    //    api.request("update", "deployments");
     } else if (obj.op == "update") {
         init("get_deployments");
-    //} else if (obj.op == "get_images") {
-    //    display_images(obj);
     }
 
 }

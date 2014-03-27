@@ -192,15 +192,14 @@ function save() {
     obj.init = "False";
     display_deployments();
     // makes one final request for deployments manually
-    api.request("get_deployments", "deployments");
     // sends user's new deployments and the final current response of deployments from the site
     dep = {};
     dep['new_deployments'] = new_deployments;
-    dep['curr_deployments'] = curr_deployments;
     DATA['deployments'] = dep;
+    api.request("update", "deployments");
     // waits 3 seconds before sending deployments
     // this is done so that the get_deployments request finishes before this is executed
-    setTimeout('api.request("update", "deployments")', 3000);
+    //setTimeout('api.request("update", "deployments")', 3000);
 
 }
 

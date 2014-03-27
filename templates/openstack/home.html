@@ -7,8 +7,8 @@
 <head>
 <script type="text/javascript" src="{% static 'openstack/user_interface.js' %}"></script>
 <script type="text/javascript" src="{% static 'openstack/message_handler.js' %}"></script>
-<script type="text/javascript" src="{% static 'openstack/d3.js' %}"></script>
-<script type="text/javascript" src="{% static 'openstack/spin.js' %}"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="http://fgnass.github.io/spin.js/spin.min.js" charset="utf-8"></script>
 <link rel="stylesheet" type="text/css" href="{% static 'openstack/style.css' %}" />
 
 </head>
@@ -38,7 +38,7 @@
                 <input type="button" value="Save" id="save" onclick="save()" />
             </div>
             <br><button onclick="stop_loop()">Stop Auto-Update</button>
-            <br><div id="spinner" class="spinner" style="width:100px;height:100px;"></div>
+            <br><div id="spinner" class="spinner"></div>
         {% else %}
             <p>No images and/or sites have been uploaded</p>
         {% endif %}
