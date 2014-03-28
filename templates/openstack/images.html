@@ -37,7 +37,7 @@ function addField(field, tmp) {
             <form action="{% url 'openstack:image_removed' %}" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% for image in user.image_set.all %}
-                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }} -- {% if image.image_addr != "" %} {{ image.image_addr }} {% else %} {{ image.image_file }} {% endif %} -- {% if image.bundled %} bundled {% else %} unbundled {% endif %}<br>
+                <input type="checkbox" name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }} -- {% if image.image_addr != "" %} {{ image.image_addr }} {% else %} {{ image.image_file }} {% endif %} -- {% if image.bundled %} bundled {% else %} unbundled {% endif %} -- {{ image.format }}<br>
             {% endfor %}
             <br>
             <input type="submit" value="Delete" />
@@ -63,6 +63,26 @@ function addField(field, tmp) {
             Images must be bundled before they can be deployed onto EC2 clouds<br>
         {% endif %}
         <br>
+        {% if user.image_set.count != 0 %}
+            <form action="{% url 'openstack:image_converted' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                Convert Images:
+                Convert <select name="image">
+                    {% for image in user.image_set.all %}
+                        {% if image.image_addr == "" %}
+                            <option name="image" value="{{ image.id }}" id="image{{ forloop.counter }}">{{ image }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                to <select name="file_format">
+                    <option name="file_format" value="qcow2">qcow2</option>
+                    <option name="file_format" value="raw">raw</option>
+                </select>
+                <input type="submit" value="Convert" />
+            </form>
+            Can only convert image files; website addresses to images cannot be converted<br>
+        {% endif %}
+        <br>
         <form action="{% url 'openstack:image_added' %}" method="post" enctype="multipart/form-data">
             Add new image:
             <div id="file">
@@ -74,6 +94,15 @@ function addField(field, tmp) {
                     <tr>
                         <td align="left">Image file:</td>
                         <td align="right"><input type="file" name="image_file" /></td>
+                    </tr>
+                    <tr>
+                        <td align="left">Image type (defaults to qcow2):</td>
+                        <td align="right">
+                            <select name="file_format">
+                                    <option name="file_format" value="qcow2">qcow2</option>
+                                    <option name="file_format" value="raw">raw</option>
+                            </select>
+                        </td>
                     </tr>
                 </table>
             </div><br>
@@ -87,6 +116,15 @@ function addField(field, tmp) {
                     <tr>
                         <td align="left">Image address:</td>
                         <td align="right"><input type="text" name="image_addr" /></td>
+                    </tr>
+                    <tr>
+                        <td align="left">Image type (defaults to qcow2):</td>
+                        <td align="right">
+                            <select name="addr_format">
+                                    <option name="addr_format" value="qcow2">qcow2</option>
+                                    <option name="addr_format" value="raw">raw</option>
+                            </select>
+                        </td>
                     </tr>
                 </table>
             </div><br>
@@ -108,6 +146,15 @@ function addField(field, tmp) {
                 <td align="left">Image address:</td>
                 <td align="right"><input type="text" name="image_addr" /></td>
             </tr>
+            <tr>
+                <td align="left">Image type (defaults to qcow2):</td>
+                <td align="right">
+                    <select name="addr_format">
+                        <option name="addr_format" value="qcow2">qcow2</option>
+                        <option name="addr_format" value="raw">raw</option>
+                    </select>
+                </td>
+            </tr>
         </table>
     </div>
     <div id="tmp2" style="display:none">
@@ -119,6 +166,15 @@ function addField(field, tmp) {
             <tr>
                 <td align="left">Image file:</td>
                 <td align="right"><input type="file" name="image_file" /></td>
+            </tr>
+            <tr>
+                <td align="left">Image type (defaults to qcow2):</td>
+                <td align="right">
+                    <select name="file_format">
+                        <option name="file_format" value="qcow2">qcow2</option>
+                        <option name="file_format" value="raw">raw</option>
+                    </select>
+                </td>
             </tr>
         </table>
     </div>

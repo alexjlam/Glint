@@ -1,11 +1,13 @@
 from django.shortcuts import render_to_response
 from django.http import HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse
+from django.core.files import File
+from django.core.files.base import ContentFile
 from django.contrib.auth.views import logout_then_login
 from django.contrib.auth.decorators import login_required
 
 from openstack.models import EC2_Cred
-from openstack_utils import create_image, delete_image, auto_delete_image
+from openstack_utils import convert_image, create_image, delete_image, auto_delete_image
 from ec2_utils import verify_cred, bundle_image, create_ami, delete_ami, auto_delete_ami
 from keystoneclient.apiclient.exceptions import Unauthorized
 import os, json, threading
@@ -248,21 +250,28 @@ def sites(request):
     return render_to_response("openstack/sites.html", {'user':request.user})
 
 @login_required
+def help(request):
+    return render_to_response("openstack/help.html", {'user':request.user})
+
+@login_required
 def image_added(request):
     """
     add the user's image file or addr to the model database and saves to repo
     """
     user = request.user
     file_list = request.FILES.getlist('image_file')
+    print 'create', type(file_list[0])
     file_name_list = request.POST.getlist('file_name')
-    for file, file_name in zip(file_list, file_name_list):
-        user.image_set.create(image_file=file, image_name=file_name)
+    file_format_list = request.POST.getlist('file_format')
+    for file, file_name, file_format in zip(file_list, file_name_list, file_format_list):
+        user.image_set.create(image_file=file, image_name=file_name, format=file_format)
 
     addr_list = request.POST.getlist('image_addr')
     addr_name_list = request.POST.getlist('addr_name')
-    for addr, addr_name in zip(addr_list, addr_name_list):
+    addr_format_list = request.POST.getlist('addr_format')
+    for addr, addr_name, addr_format in zip(addr_list, addr_name_list, addr_format_list):
         if addr != "":
-            user.image_set.create(image_addr=addr, image_name=addr_name)
+            user.image_set.create(image_addr=addr, image_name=addr_name, format=addr_format)
 
     return render_to_response("openstack/images.html", {'user':user})
 
@@ -372,3 +381,21 @@ def image_bundled(request):
     image.save()
     return render_to_response("openstack/images.html", {'user':user})
 
+@login_required
+def image_converted(request):
+    """
+    converts image into another format
+    """
+    user = request.user
+    image = user.image_set.get(pk=request.POST['image'])
+    to_format = str(request.POST['file_format'])
+    # makes a converted version of image in top level
+    to_file = convert_image(image, to_format)
+    f = open(to_file)
+    image_file = File(f)
+    name = str(image) + '-' + to_format
+    # stores converted image in the database making copy in the user's folder
+    user.image_set.create(image_file=image_file, image_name=name, format=to_format)
+    # deletes the temporary converted file in top level
+    os.remove(to_file)
+    return render_to_response("openstack/images.html", {'user':user})

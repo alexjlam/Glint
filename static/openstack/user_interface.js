@@ -206,7 +206,7 @@ function save() {
 // displays the sidebar links to Deployments, Images, Sites, and Logout
 function display_sidebar() {
 
-    data = ["Deployments", "Images", "Sites", "Logout"];
+    data = ["Deployments", "Images", "Sites", "Help", "Logout"];
     d3.select(".links")
         .append("div") //div
         .selectAll("div") //div
@@ -229,6 +229,8 @@ function display_sidebar() {
                     window.location = href.replace(/profile\/.*$/, "profile/images/");
                 } else if (d == "Sites") {
                     window.location = href.replace(/profile\/.*$/, "profile/sites/");
+                } else if (d == "Help") {
+                    window.location = href.replace(/profile\/.*$/, "profile/help/");
                 } else if (d == "Logout") {
                     window.location = href.replace(/profile\/.*$/, "profile/logout/");
                 }

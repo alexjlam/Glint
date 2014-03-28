@@ -10,9 +10,10 @@ class MyUser(AbstractUser):
 
 class Image(models.Model):
     user = models.ForeignKey(MyUser)
+    image_name = models.CharField(max_length=500)
     image_file = models.FileField(upload_to=get_file_path, blank=True)
     image_addr = models.CharField(max_length=500, blank=True)
-    image_name = models.CharField(max_length=500)
+    format = models.CharField(max_length=10, blank=True)
     bundled = models.BooleanField(default=False)
 
     def __unicode__(self):

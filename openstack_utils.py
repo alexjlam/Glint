@@ -1,11 +1,20 @@
 #!/usr/bin/env python
 
-import subprocess, requests, json, re
+import subprocess, re, os
 from keystoneclient.v2_0 import client as keyclient
 from keystoneclient.apiclient.exceptions import Unauthorized
 from glanceclient.v1 import client as glclient
 from glanceclient.exc import HTTPUnauthorized as BadToken
-from novaclient.v1_1 import client as nvclient
+
+def convert_image(image, to_format):
+    """
+    makes a copy of the image in another format in top level
+    """
+    from_file = str(image.image_file)
+    from_format = str(image.format)
+    to_file = (os.path.splitext(from_file)[0] + '.' + to_format).split('/')[1]
+    subprocess.check_output(['qemu-img', 'convert', '-f', from_format, '-O', to_format, from_file, to_file])
+    return to_file
 
 def export_RC_file(site_file):
     """
@@ -63,6 +72,7 @@ def create_image(image, site, ids, errors, i):
     create an image on the site using the glanceclient
     """    
     name = image.image_name
+    format = image.format
     try:    
         update_token(site)
         # uses the token and endpoint to get a glanceclient
@@ -71,10 +81,10 @@ def create_image(image, site, ids, errors, i):
         if image.image_file != "":
             image_file = str(image.image_file)
             with open(image_file) as fimage:
-                image = glance.images.create(name=name, disk_format="qcow2", container_format="bare", data=fimage)
+                image = glance.images.create(name=name, disk_format=format, container_format="bare", data=fimage)
         # creates an image with a website address
         else:
-            image = glance.images.create(name=name, disk_format="qcow2", container_format="bare", copy_from=image.image_addr)
+            image = glance.images.create(name=name, disk_format=format, container_format="bare", copy_from=image.image_addr)
     except (Unauthorized):
         errors[i] = site.site_name + " Unauthorized"
     #except (HTTPServiceUnavailable):

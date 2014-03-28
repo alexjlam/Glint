@@ -29,7 +29,7 @@ function init(op) {
     api.request(op, "init");
     // if init is on the main deployment page, it automatically makes a request every 5 seconds
     if (op == "get_deployments") {
-        stop = setInterval('api.request("'+op+'", "deployments")', 5000);
+        stop = setInterval('api.request("'+op+'", "deployments")', 10000);
         //setTimeout('api.request("'+op+'", "deployments")', 5000);
     }
 }

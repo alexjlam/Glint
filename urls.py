@@ -8,6 +8,7 @@ urlpatterns = patterns('',
     url(r'^logout/$', views.logout_user, name='logout_user'),
     url(r'^images/$', views.images, name='images'),
     url(r'^sites/$', views.sites, name='sites'),
+    url(r'^help/$', views.help, name='help'),
     url(r'^image_added/$', views.image_added, name='image_added'),
     url(r'^site_added/$', views.site_added, name='site_added'),
     url(r'^image_removed/$', views.image_removed, name='image_removed'),
@@ -15,7 +16,7 @@ urlpatterns = patterns('',
     url(r'^ec2_added/$', views.ec2_added, name='ec2_added'),
     url(r'^ec2_removed/$', views.ec2_removed, name='ec2_removed'),
     url(r'^image_bundled/$', views.image_bundled, name='image_bundled'),
-
+    url(r'^image_converted/$', views.image_converted, name='image_converted'),
 )
 
 

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=1.0" />
+
+{% load static %}
+<html>
+<head>
+<script type="text/javascript" src="{% static 'openstack/user_interface.js' %}"></script>
+<script type="text/javascript" src="{% static 'openstack/message_handler.js' %}"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<link rel="stylesheet" type="text/css" href="{% static 'openstack/style.css' %}" />
+
+</head>
+<title>Help</title>
+<body>
+
+    <div class="topbar">
+        <h1>Glint | HEPRC Image Distribution Service</h1>
+    </div>
+
+    <div class="sidebar">
+        Logged in as: <a style="color: blue;">{{ user }}</a>
+        <div class="links">
+            <script>display_sidebar()</script>
+        </div>
+    </div>
+
+    <div class="main">
+        <h2>How to deploy an image onto a cloud:</h2>
+        <p>
+            1. upload image to Glint<br>
+                Glint Images page under 'Add new image'<br>
+                a) enter name for image<br>
+                b1) upload image file<br>
+                or b2) enter downloadable image address<br>
+                c) [Upload Image]
+        </p>
+        <p>
+            2a. upload Openstack site<br>
+                Openstack site -&#62; Access &#38; Security -&#62; API Access tab<br>
+                DOWNLOAD Openstack RC File<br>
+                Glint Sites page under 'Add new Openstack site'<br>
+                a) enter name and your password for the site<br>
+                b) upload the Openstack RC File that was downloaded<br>
+                c) [Upload Sites]
+        </p>
+        <p>
+            or 2b1. upload EC2 Site<br>
+                Security Credentials in IAM Management Console on Amazon Web Services<br>
+                GET Account Number, Access and Secret Keys<br>
+                DOWNLOAD certificate and private key files<br>
+                Glint Sites page under 'Enter EC2 credentials'<br>
+                a) enter account number, access key, and secret key<br>
+                b) upload certificate and private key that was downloaded<br>
+                c) [Save EC2 Credentials]
+        </p>
+        <p>
+            2b2. bundle image<br>
+                * in order to deploy onto EC2 site you must bundle your image first<br>
+                * you can only bundle images that are from image files, not image addresses<br>
+                Glint Images under 'Bundle images'<br>
+                a) select your image you want to [Bundle]
+        <p>
+            3. deploy image to site<br>
+                a) under the image you want to deploy select to site<br>
+                * green sites are sites that the image is on/will be on after saving<br>
+                * red sites are sites that the image in off/will be off after saving<br>
+                b) once done making changes [Save]
+        </p>
+    </div>
+
+</body>
+</html>
