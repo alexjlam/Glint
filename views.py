@@ -6,11 +6,12 @@ from django.core.files.base import ContentFile
 from django.contrib.auth.views import logout_then_login
 from django.contrib.auth.decorators import login_required
 
-from openstack.models import EC2_Cred
+from vmdist.models import EC2_Cred
 from openstack_utils import convert_image, create_image, delete_image, auto_delete_image
 from ec2_utils import verify_cred, bundle_image, create_ami, delete_ami, auto_delete_ami
 from keystoneclient.apiclient.exceptions import Unauthorized
 import os, json, threading
+import time, sys
 
 @login_required
 def jsonhandler(request):
@@ -68,12 +69,15 @@ def get_latest_deployments(request):
 
     # gets a list of images that were deleted manually on Openstack and EC2
     auto_delete_image(openstack_deployments, to_delete)
-    if user.ec2_cred:
+    try:
         cred = user.ec2_cred
         auto_delete_ami(ec2_deployments, to_delete, cred)
+    except Exception:
+        # no EC2 credentials registered
+        pass
 
     # deletes the above list of images from the models
-    for image_ID in to_delete:        
+    for image_ID in to_delete:
         dep_image = user.deployed_image_set.get(image_identity=image_ID)
         dep_image.delete()
 
@@ -233,7 +237,7 @@ def home(request):
     """
     renders user's home page
     """
-    return render_to_response("openstack/home.html", {'user':request.user})
+    return render_to_response("vmdist/home.html", {'user':request.user})
 
 def logout_user(request):
     """
@@ -243,15 +247,15 @@ def logout_user(request):
 
 @login_required
 def images(request):
-    return render_to_response("openstack/images.html", {'user':request.user})
+    return render_to_response("vmdist/images.html", {'user':request.user})
 
 @login_required
 def sites(request):
-    return render_to_response("openstack/sites.html", {'user':request.user})
+    return render_to_response("vmdist/sites.html", {'user':request.user})
 
 @login_required
 def help(request):
-    return render_to_response("openstack/help.html", {'user':request.user})
+    return render_to_response("vmdist/help.html", {'user':request.user})
 
 @login_required
 def image_added(request):
@@ -260,7 +264,6 @@ def image_added(request):
     """
     user = request.user
     file_list = request.FILES.getlist('image_file')
-    print 'create', type(file_list[0])
     file_name_list = request.POST.getlist('file_name')
     file_format_list = request.POST.getlist('file_format')
     for file, file_name, file_format in zip(file_list, file_name_list, file_format_list):
@@ -273,7 +276,7 @@ def image_added(request):
         if addr != "":
             user.image_set.create(image_addr=addr, image_name=addr_name, format=addr_format)
 
-    return render_to_response("openstack/images.html", {'user':user})
+    return render_to_response("vmdist/images.html", {'user':user})
 
 @login_required
 def image_removed(request):
@@ -294,7 +297,7 @@ def image_removed(request):
                 os.remove(str(image_choice.image_file) + '.part.' + str(i))
                 i += 1
         image_choice.delete()
-    return render_to_response("openstack/images.html", {'user':user})
+    return render_to_response("vmdist/images.html", {'user':user})
 
 @login_required
 def site_added(request):
@@ -307,7 +310,7 @@ def site_added(request):
     password_list = request.POST.getlist('password')
     for name, file, password in zip(name_list, file_list, password_list):
         user.site_set.create(site_name=name, site_RC_file=file, site_password=password, token="", endpoint="", site_type='openstack')
-    return render_to_response("openstack/sites.html", {'user':user})
+    return render_to_response("vmdist/sites.html", {'user':user})
 
 @login_required
 def site_removed(request):
@@ -321,7 +324,7 @@ def site_removed(request):
         if site_choice.site_type == 'openstack':
             os.remove(str(site_choice.site_RC_file))
         site_choice.delete()
-    return render_to_response("openstack/sites.html", {'user':user})
+    return render_to_response("vmdist/sites.html", {'user':user})
 
 @login_required
 def ec2_added(request):
@@ -345,10 +348,10 @@ def ec2_added(request):
         for site in ec2_sites:
             name = "EC2-" + site
             user.site_set.create(site_name=name, site_type='ec2')
-        return render_to_response("openstack/sites.html", {'user':user})
+        return render_to_response("vmdist/sites.html", {'user':user})
     else:
         error = "Access key or secret key is unauthorized. Please try again."
-        return render_to_response("openstack/sites.html", {'user':user, 'error':error})
+        return render_to_response("vmdist/sites.html", {'user':user, 'error':error})
 
 @login_required
 def ec2_removed(request):
@@ -365,7 +368,7 @@ def ec2_removed(request):
     for site in sites:
         if site.site_type == 'ec2':
             site.delete()
-    return render_to_response("openstack/sites.html", {'user':user})
+    return render_to_response("vmdist/sites.html", {'user':user})
 
 @login_required
 def image_bundled(request):
@@ -379,7 +382,7 @@ def image_bundled(request):
     bundle_image(name, image, cred)
     image.bundled = True
     image.save()
-    return render_to_response("openstack/images.html", {'user':user})
+    return render_to_response("vmdist/images.html", {'user':user})
 
 @login_required
 def image_converted(request):
@@ -398,4 +401,4 @@ def image_converted(request):
     user.image_set.create(image_file=image_file, image_name=name, format=to_format)
     # deletes the temporary converted file in top level
     os.remove(to_file)
-    return render_to_response("openstack/images.html", {'user':user})
+    return render_to_response("vmdist/images.html", {'user':user})

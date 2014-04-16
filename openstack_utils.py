@@ -70,10 +70,10 @@ def get_token_and_ep(RC_dict):
 def create_image(image, site, ids, errors, i):
     """
     create an image on the site using the glanceclient
-    """    
-    name = image.image_name
+    """
+    name = str(image.image_name)
     format = image.format
-    try:    
+    try:
         update_token(site)
         # uses the token and endpoint to get a glanceclient
         glance = glclient.Client(endpoint=site.endpoint, token=site.token)
@@ -88,7 +88,7 @@ def create_image(image, site, ids, errors, i):
     except (Unauthorized):
         errors[i] = site.site_name + " Unauthorized"
     #except (HTTPServiceUnavailable):
-        #errors[i] = site.site_name + " HTTPServiceUnavailable"
+    #errors[i] = site.site_name + " HTTPServiceUnavailable"
 
     ids[i] = image.id
 

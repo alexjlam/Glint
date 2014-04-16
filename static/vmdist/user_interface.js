@@ -238,7 +238,7 @@ function display_sidebar() {
 
 }
 
-// stops the 5 second loop interval
+// user clicks the 'Stop Auto-Update' button to stop the 10 second loop update interval
 function stop_loop() {
     console.log("stopping...");
     clearInterval(stop);

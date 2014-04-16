@@ -5,9 +5,9 @@
 {% load static %}
 <html>
 <head>
-<script type="text/javascript" src="{% static 'openstack/user_interface.js' %}"></script>
+<script type="text/javascript" src="{% static 'vmdist/user_interface.js' %}"></script>
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-<link rel="stylesheet" type="text/css" href="{% static 'openstack/style.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'vmdist/style.css' %}" />
 <script type="text/javascript">
 function addField(field, tmp) {
     var div1 = document.createElement('div');
@@ -35,7 +35,7 @@ function addField(field, tmp) {
     <div class="main">
         <h2>Sites</h2>
         {% if user.site_set.count != 0 %}
-            <form action="{% url 'openstack:site_removed' %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'vmdist:site_removed' %}" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% for site in user.site_set.all %}
                 <input type="checkbox" name=site value="{{ site.id }}" id="site{{ forloop.counter }}">{{ site }} -- {{ site.site_type }}<br>
@@ -71,12 +71,12 @@ function addField(field, tmp) {
                     <td align="right">{{ user.ec2_cred.private_key }}</td>
                 </tr>
             </table>
-            <form action="{% url 'openstack:ec2_removed' %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'vmdist:ec2_removed' %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="submit" name="submit" value="Delete EC2 Credentials" />
             </form>
         {% else %}
-            <form action="{% url 'openstack:ec2_added' %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'vmdist:ec2_added' %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 {% if error %}
                     <p><a style="color: red;">{{ error }}</a></p>
@@ -109,7 +109,7 @@ function addField(field, tmp) {
         {% endif %}
         <br>
 
-        <form action="{% url 'openstack:site_added' %}" method="post" enctype="multipart/form-data">
+        <form action="{% url 'vmdist:site_added' %}" method="post" enctype="multipart/form-data">
             Add new Openstack site:
             <div id="site">
                 <table>

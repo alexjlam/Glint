@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from openstack.models import MyUser, Image, Site, EC2_Cred, Deployed_Image
+from vmdist.models import MyUser, Image, Site, EC2_Cred, Deployed_Image
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm
 
