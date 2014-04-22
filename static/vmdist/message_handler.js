@@ -27,7 +27,7 @@ function init(op) {
     console.log("initializing ImageServiceAPI");
     api = new ImageServiceAPI();
     api.request(op, "init");
-    // if init is on the main deployment page, it automatically makes a request every 5 seconds
+    // if init is on the main deployment page, it automatically makes a request every 10 seconds
     if (op == "get_deployments") {
         //api.request(op, "deployments");
         stop = setInterval('api.request("'+op+'", "deployments")', 10000);
@@ -62,9 +62,6 @@ function JSONMessageFactory() {
     this.createRequestMessage = function(operation,opDataKey) {
         //create json from javascript object located at opDataKey
         jsonData = JSON.stringify(DATA[opDataKey]);
-        //jsonData = '[{"cirros":"alto"},{"ubuntu":"dair"}]';
-        //jsonData = '{"to_deploy":[{"cirros":"alto"},{"ubuntu":"dair"}], "to_delete":[]}';
-        //console.log(jsonData);
         return '{"op":"'+operation+'","deployments":'+jsonData+'}';
     };
 }
@@ -128,7 +125,8 @@ function HTTPUtils() {
 function response_op_handler(obj) {
 
     if (obj.op == "get_deployments") {
-        //console.log("obj.init " + obj.init);
+        // if it's the first page load, it initializes the original first deployments
+        // and sets the saving state to false
         if (obj.init == "True") {
             console.log("first loop");
             saving = false;

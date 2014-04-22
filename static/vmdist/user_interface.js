@@ -63,16 +63,6 @@ function compare_deployments() {
 
 }
 
-function tmp_print(deployments) {
-    for (image in deployments) {
-        console.log(image);
-        sites = deployments[image];
-        for (i=0;i<sites.length;i++) {
-            console.log(sites[i]);
-        }
-    }
-}
-
 // displays the deployments with D3 with each image and the sites that it's deployed on
 function display_deployments() {
 
@@ -96,10 +86,8 @@ function display_deployments() {
     deployment = deployments.append("p");
 
     deployment.append("p")
-        //.style("width", "400px")
-        //.style("height", "100px")
-        //.style("float", "left")
         .text(function(d) {
+            // image text
             image = String(d3.keys(d));
             return image;
         } );
@@ -107,8 +95,7 @@ function display_deployments() {
     for (i=0;i<num_sites;i++) {
 
         deployment.append("p2")
-            //.style("text-indent", "50px")
-            //.style("float", "left")
+            // saves site for node
             .attr("site", function(d) {
                 key = d3.keys(d);
                 site = d[key][i];
@@ -120,8 +107,8 @@ function display_deployments() {
                 site = d3.select(this).attr("site")
                 return site;
             } )
-            //.style("width", "100px")
             .style("opacity", function(d) {
+                // if it's saving, all the sites are opaque
                 if (saving == true) {
                     return .5;
                 } else {
@@ -183,35 +170,30 @@ function save() {
     // stops the loop so that it will not automatically get more updates
     stop_loop();
     loading();
+
+    // display deployments again so that it disables Save button and site buttons at the same time
     saving = true;
     document.getElementById("save").disabled = true;
     console.log("saving...");
-    // display deployments so that it disables Save button and site buttons at the same time
-    // however this requires obj to be a global variable
-    // displays a saved state of deployments that will be sent
     obj.init = "False";
     display_deployments();
-    // makes one final request for deployments manually
-    // sends user's new deployments and the final current response of deployments from the site
+
     dep = {};
     dep['new_deployments'] = new_deployments;
     DATA['deployments'] = dep;
     api.request("update", "deployments");
-    // waits 3 seconds before sending deployments
-    // this is done so that the get_deployments request finishes before this is executed
-    //setTimeout('api.request("update", "deployments")', 3000);
 
 }
 
-// displays the sidebar links to Deployments, Images, Sites, and Logout
+// displays the sidebar links to Deployments, Images, Sites, Help, and Logout
 function display_sidebar() {
 
     data = ["Deployments", "Images", "Sites", "Help", "Logout"];
     d3.select(".links")
-        .append("div") //div
-        .selectAll("div") //div
+        .append("div")
+        .selectAll("div")
             .data(data)
-        .enter().append("p") //p
+        .enter().append("p")
             .text(function(d) { return d; })
             .on("mouseover", function() {
                 this.style.textDecoration="underline";

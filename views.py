@@ -2,7 +2,6 @@ from django.shortcuts import render_to_response
 from django.http import HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse
 from django.core.files import File
-from django.core.files.base import ContentFile
 from django.contrib.auth.views import logout_then_login
 from django.contrib.auth.decorators import login_required
 
@@ -11,7 +10,6 @@ from openstack_utils import convert_image, create_image, delete_image, auto_dele
 from ec2_utils import verify_cred, bundle_image, create_ami, delete_ami, auto_delete_ami
 from keystoneclient.apiclient.exceptions import Unauthorized
 import os, json, threading
-import time, sys
 
 @login_required
 def jsonhandler(request):

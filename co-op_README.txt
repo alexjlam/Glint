@@ -1,20 +1,33 @@
 For future co-op students to continue work on Glint
 
 When you are ready to start working on Glint you will need to have the following installed:
-
 Django 1.6
 https://docs.djangoproject.com/en/1.6/topics/install/
-(I also recommend going through the tutorial for Django as well)
 python 2.7
-python glanceclient
-python keystoneclient
-python boto
+python-glanceclient
+python-keystoneclient
+python-boto
 EC2 CLI and AMI tools and Java
 http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/set-up-ec2-cli-linux.html
 http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/set-up-ami-tools.html
 
-Once those are installed, follow the instructions below to set up the project:
+Here are some helpful links for using the above tools:
+Django 1.6 Tutorial
+https://docs.djangoproject.com/en/1.6/intro/tutorial01/
+D3 Bar Chart Tutorial
+http://bost.ocks.org/mike/bar/
+Managing images with Glance command line tool
+http://docs.openstack.org/user-guide/content/cli_manage_images.html
+Openstack Python APIs
+http://www.ibm.com/developerworks/cloud/library/cl-openstack-pythonapis/index.html?ca=drs-
+Amazon EC2 command line tools documentation
+http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/command-reference.html
+Amazon Web Services Python Boto documentation
+http://boto.readthedocs.org/en/latest/index.html
+Google Compute Engine Python Client Library
+https://developers.google.com/compute/docs/api/python-guide
 
+Once everything is installed and working, follow the instructions below to set up the project:
 $ django-admin.py startproject glint
 $ cd glint/
 edit glint/settings.py
@@ -43,7 +56,8 @@ $ git clone https://github.com/alexjlam/vmdist.git
 edit glint/settings.py
     add:
         AUTH_USER_MODEL = 'vmdist.MyUser'
-        'vmdist', (in INSTALLED_APPS)
+        in INSTALLED_APPS:
+            'vmdist',
 edit glint/urls.py
     from django.conf.urls import patterns, include, url
     from django.contrib.auth.views import login
@@ -65,11 +79,20 @@ go to x.x.x.x:8000/admin in your browser to see admin page
 go to x.x.x.x:8000/accounts/login in browser to go to login page for Glint
 navigate to the Help page for instructions to deploy an image to a cloud site
 
-note: when you are using the EC2 clouds, you will need to source ec2-env.sh before running the server so the program can find the AMI and CLI tool homes
+You can download some lightweight test images here:
+http://docs.openstack.org/image-guide/content/ch_obtaining_images.html
 
-stuff to work on:
-launching AMIs on EC2 fails on instance status check
-upgrading to Django 1.7 architecture when it comes out
-deleting images and site files from the server will not update the model, and deleting an image via admin page will not deletethe file from the server
-bundle_image(), create_ami() in ec2_utils and convert_image() in openstack_utils use subprocess
-for deploying images to EC2, if the account number, certificate, or private key is wrong, it will not know if they are good until you try to launch the AMI
+Links to the Openstack and Amazon dashboards for the clouds:
+Openstack Mouse Cloud (Victoria, BC)
+https://mouse01.heprc.uvic.ca/
+Openstack Dair Cloud (Edmonton, AB)
+https://nova-ab.dair-atir.canarie.ca/
+Openstack Alto Cloud (Ottawa, ON)
+https://alto.cloud.nrc.ca/
+Amazon EC2 Management Console
+https://console.aws.amazon.com/ec2/v2/
+Amazon S3 Management Console
+https://console.aws.amazon.com/s3/
+
+*Note: when you are using the EC2 clouds, you will need to source ec2-env.sh before running the server so the program can find the AMI and CLI tool homes
+
