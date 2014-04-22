@@ -52,7 +52,8 @@ def create_ami(image, site, cred, ids, buckets, i):
     name = image.image_name
 
     region = regions[(site.site_name)][1]
-    bucket = name + '-' + region1 + '-' + str(time.time()) #name-region-time
+    bucket = name + '-' + region1 + '-' + str(int(time.time())) #name-region-time
+
     s3conn = S3Connection(ak, sk)
     s3conn.create_bucket(bucket_name=bucket, location=region2)
 
